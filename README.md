@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <title>مؤسسة السلام - تسجيل الديون</title>
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      direction: rtl;
+      background-color: #eaf4ea;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background-color: #2e7d32;
+      color: white;
+      text-align: center;
+      padding: 20px;
+      font-size: 24px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .container {
+      padding: 20px;
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    label, input, select, textarea, button {
+      margin: 6px 0;
+      display: block;
+      width: 100%;
+      max-width: 400px;
+      padding: 8px;
+      font-size: 16px;
+    }
+
+    textarea { resize: vertical; }
+
+    button {
+      cursor: pointer;
+      border: none;
+      color: white;
+    }
+
+    .btn-add {
+      background-color: #43a047;
+    }
+
+    .btn-add:hover {
+      background-color: #388e3c;
+    }
+
+    .btn-delete {
+      background-color: #c62828;
+    }
+
+    .btn-delete:hover {
+      background-color: #b71c1c;
+    }
+
+    .btn-print {
+      background-color: #0277bd;
+      margin-top: 10px;
+    }
+
+    .btn-print:hover {
+      background-color: #01579b;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #a5d6a7;
+    }
+
+    .section-title {
+      margin-top: 30px;
+      font-size: 20px;
+      color: #2e7d32;
+      border-bottom: 2px solid #81c784;
+      padding-bottom: 5px;
+    }
+
+    .total-box {
+      font-weight: bold;
+      margin: 10px 0;
+      color: #1b5e20;
+    }
+
+    .name-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .name-row > div {
+      flex: 1;
+      min-width: 180px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>مؤسسة السلام لتسجيل الديون</header>
+
+  <div class="container">
+    <h3>إضافة دين جديد</h3>
+
+    <div class="name-row">
+      <div>
+        <label>اختر الاسم:</label>
+        <select id="nameSelect">
+          <option value="">اختر اسم</option>
+        </select>
+      </div>
+      <div>
+        <label>أو أضف اسم جديد:</label>
+        <input type="text" id="newName" placeholder="اسم جديد" />
+        <button class="btn-add" onclick="addNewName()">➕ إضافة الاسم</button>
+      </div>
+    </div>
+
+    <label>المبلغ (جنيه):</label>
+    <input type="number" id="amount" />
+
+    <label>تاريخ الدين:</label>
+    <input type="date" id="date" />
+
+    <label>الوصف:</label>
+    <textarea id="description" rows="2" placeholder="مثال: سلفة أو مشتريات..."></textarea>
+
+    <button class="btn-add" onclick="addDebt()">➕ إضافة الدين</button>
+
+    <label>فلترة حسب الاسم:</label>
+    <select id="filterName" onchange="renderTable()">
+      <option value="">الكل</option>
+    </select>
+
+    <div class="total-box" id="totalBox"></div>
+
+    <button class="btn-print" onclick="window.print()">🖨️ طباعة التقرير</button>
+
+    <h3 class="section-title">📌 الديون الحالية</h3>
+    <table id="debtTable">
+      <thead>
+        <tr>
+          <th>الاسم</th>
+          <th>المبلغ</th>
+          <th>التاريخ</th>
+          <th>الوصف</th>
+          <th>الحالة</th>
+          <th>إجراء</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <h3 class="section-title">✅ الديون المسددة</h3>
+    <table id="paidTable">
+      <thead>
+        <tr>
+          <th>الاسم</th>
+          <th>المبلغ</th>
+          <th>التاريخ</th>
+          <th>الوصف</th>
+          <th>الحالة</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    let debts = JSON.parse(localStorage.getItem("debts") || "[]");
+    let paidDebts = JSON.parse(localStorage.getItem("paidDebts") || "[]");
+    let names = JSON.parse(localStorage.getItem("names") || "[]");
+
+    function saveData() {
+      localStorage.setItem("debts", JSON.stringify(debts));
+      localStorage.setItem("paidDebts", JSON.stringify(paidDebts));
+      localStorage.setItem("names", JSON.stringify(names));
+    }
+
+    function renderNameSelects() {
+      const nameSelect = document.getElementById("nameSelect");
+      const filterSelect = document.getElementById("filterName");
+
+      nameSelect.innerHTML = `<option value="">اختر اسم</option>`;
+      filterSelect.innerHTML = `<option value="">الكل</option>`;
+
+      names.forEach(name => {
+        const opt1 = document.createElement("option");
+        opt1.value = name;
+        opt1.textContent = name;
+        nameSelect.appendChild(opt1);
+
+        const opt2 = document.createElement("option");
+        opt2.value = name;
+        opt2.textContent = name;
+        filterSelect.appendChild(opt2);
+      });
+    }
+
+    function addNewName() {
+      const newName = document.getElementById("newName").value.trim();
+      if (newName && !names.includes(newName)) {
+        names.push(newName);
+        saveData();
+        renderNameSelects();
+        document.getElementById("newName").value = "";
+        alert("تم إضافة الاسم بنجاح");
+      } else {
+        alert("الاسم موجود أو غير صالح");
+      }
+    }
+
+    function renderTable() {
+      const filterName = document.getElementById("filterName").value;
+      const tbody = document.querySelector("#debtTable tbody");
+      const totalBox = document.getElementById("totalBox");
+      tbody.innerHTML = "";
+
+      let filteredDebts = debts;
+      if (filterName) {
+        filteredDebts = debts.filter(d => d.name === filterName);
+      }
+
+      let total = 0;
+
+      filteredDebts.forEach((debt, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${debt.name}</td>
+          <td>${debt.amount} جنيه</td>
+          <td>${debt.date}</td>
+          <td>${debt.description}</td>
+          <td>غير مسدد</td>
+          <td><button class="btn-delete" onclick="payDebt(${debts.indexOf(debt)})">تسديد</button></td>
+        `;
+        tbody.appendChild(row);
+        total += parseFloat(debt.amount);
+      });
+
+      totalBox.textContent = filterName ? `إجمالي ديون ${filterName}: ${total} جنيه` : "";
+    }
+
+    function renderPaidTable() {
+      const tbody = document.querySelector("#paidTable tbody");
+      tbody.innerHTML = "";
+      paidDebts.forEach(debt => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${debt.name}</td>
+          <td>${debt.amount} جنيه</td>
+          <td>${debt.date}</td>
+          <td>${debt.description}</td>
+          <td>مسدد</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function addDebt() {
+      const name = document.getElementById("nameSelect").value;
+      const amount = document.getElementById("amount").value.trim();
+      const date = document.getElementById("date").value;
+      const description = document.getElementById("description").value.trim();
+
+      if (!name || !amount || !date) {
+        alert("يرجى اختيار الاسم وإدخال المبلغ والتاريخ");
+        return;
+      }
+
+      debts.push({ name, amount, date, description });
+      saveData();
+      renderTable();
+      renderPaidTable();
+      document.getElementById("amount").value = "";
+      document.getElementById("date").value = "";
+      document.getElementById("description").value = "";
+    }
+
+    function payDebt(index) {
+      if (confirm("هل تريد نقل هذا الدين إلى السجل المسدد؟")) {
+        const paid = debts.splice(index, 1)[0];
+        paidDebts.push(paid);
+        saveData();
+        renderTable();
+        renderPaidTable();
+      }
+    }
+
+    // أول تحميل
+    renderNameSelects();
+    renderTable();
+    renderPaidTable();
+  </script>
+
+</body>
+</html>
